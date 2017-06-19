@@ -11,41 +11,15 @@ data ImgFormat = Bmp | Jpg | Png | Tiff
 
 main :: IO ()
 main = do
-  [ext, path] <- getArgs
-  case fromExt ext of
-    Nothing -> putStrLn "Sorry, I don't know such format!"
-    Just fmt -> convertImg fmt path
+  [path] <- getArgs
+  savePngImage path generateImg
 
-convertImg
-  :: ImgFormat         -- ^ Format of resulting image
-  -> FilePath          -- ^ Where to get source image
-  -> IO ()
-convertImg fmt path = do
-  eimg <- readImage path
-  case eimg of
-    Left err -> putStrLn ("Could not read image: " ++ err)
-    Right img ->
-      (case fmt of -- select saving function
-        Bmp  -> saveBmpImage
-        Jpg  -> saveJpgImage 100
-        Png  -> savePngImage
-        Tiff -> saveTiffImage)
-      (replaceExtension path (toExt fmt)) -- replace file extension
-      img -- pass it 'DynamicImage' we've read
+generateImg :: DynamicImage
+generateImg = ImageRGB8 (generateImage originalFnc 1200 1200)
 
--- | Get file extension corresponding to known image format.
-toExt :: ImgFormat -> String
-toExt Bmp      = "bmp"
-toExt Jpg      = "jpeg"
-toExt Png      = "png"
-toExt Tiff     = "tiff"
-
--- | Get image format corresponding to given extension or 'Nothing' if we
--- don't support that format.
-fromExt :: String -> Maybe ImgFormat
-fromExt "bmp"  = Just Bmp
-fromExt "jpeg" = Just Jpg
-fromExt "png"  = Just Png
-fromExt "tiff" = Just Tiff
-fromExt _      = Nothing
+originalFnc :: Int -> Int -> PixelRGB8
+originalFnc x y =
+  let (q, r) = x `quotRem` max 10 y
+      s      = fromIntegral . min 0xff
+  in PixelRGB8 (s q) (s r) (s (q + r + 30))
 
