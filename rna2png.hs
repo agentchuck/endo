@@ -42,20 +42,53 @@ data ImgFormat = Bmp | Jpg | Png | Tiff
 type RGB = (Int, Int, Int)
 data Color = CRGB   !RGB 
            | CTrans !Int
+     deriving Show
+
+black   = CRGB (0, 0, 0)
+red     = CRGB (255, 0, 0)
+green   = CRGB (0, 255, 0)
+yellow  = CRGB (255, 255, 0)
+blue    = CRGB (0, 0, 255)
+magenta = CRGB (255, 0, 255)
+cyan    = CRGB (0, 255, 255)
+white   = CRGB (255, 255, 255)
+
+transparent = CTrans 0
+opaque      = CTrans 255
 
 data Bucket = Bucket { rTot :: Int
-                      , gTot :: Int
-                      , bTot :: Int
-                      , aTot :: Int
-                      , cNum :: Int
-                      , tNum :: Int
-                      }
---type Pos = (Int, Int)
+                     , gTot :: Int
+                     , bTot :: Int
+                     , aTot :: Int
+                     , cNum :: Int
+                     , tNum :: Int
+                     } deriving Show
+
+type Pos = (Int, Int)
 data Dir = N | E | S | W
---type Pixel = (Int, Int, Int, Int)
+data Pix = Pix { r :: Int
+                   , g :: Int
+                   , b :: Int
+                   , a :: Int
+                   } deriving Show
+
 -- type Bitmap = [
 
 -- type State = (Bucket, Pos, Pos, Dir, [Bitmap])
+
+emptyBucket :: Bucket
+emptyBucket = Bucket 0 0 0 0 0 0 
+
+addColor :: Color -> Bucket -> Bucket
+addColor (CRGB (r,g,b)) (Bucket br bg bb ba bc bt) = Bucket (br + r) (bg + g) (bb + b) ba (bc + 1) bt
+addColor (CTrans t) (Bucket br bg bb ba bc bt) = Bucket br bg bb (ba + t) bc (bt + 1)
+
+drip :: Bucket -> Pix
+drip bucket = Pix pr pg pb pa
+  where pr = div (rTot bucket) (max 1 (cNum bucket))
+        pg = div (gTot bucket) (max 1 (cNum bucket))
+        pb = div (bTot bucket) (max 1 (cNum bucket))
+        pa = div (aTot bucket) (max 1 (tNum bucket))
 
 ccw :: Dir -> Dir
 ccw dir = 
@@ -71,6 +104,21 @@ cw dir =
               W -> W
               S -> N
 
+fixpos :: Pos -> Pos
+fixpos (x,y) = (fixcoord x, fixcoord y)
+  where fixcoord c 
+          | c < 0 = 0
+          | c > 599 = 599
+          | otherwise = c
+
+move :: Dir -> Pos -> Pos
+move dir (inx, iny) = fixpos (outx, outy)
+  where outx = case dir of E -> inx + 1
+                           W -> inx - 1
+                           _ -> inx
+        outy = case dir of S -> iny + 1
+                           N -> iny - 1
+                           _ -> iny
 
 main :: IO ()
 main = do
